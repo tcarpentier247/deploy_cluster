@@ -1,5 +1,6 @@
 ---
 # acme certificate configuration
+
 haproxy_container: "{{ osvc_haproxy_service_namespace }}..{{ osvc_haproxy_short_service_name }}.container.2"
 cert_domain_name: ""
 cert_mail: ""
