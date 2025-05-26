@@ -1,0 +1,110 @@
+- hosts: all
+  tasks:
+    - name: Deploy cluster
+      import_role:
+        name: cluster
+      vars:
+        osvc_clustername: example
+        osvc_hb_timeout: 25s
+        osvc_update_etc_hosts: true
+        osvc_configure_webapp: false
+        osvc_configure_vip: true
+        osvc_cluster_vip_addr: '192.0.2.25'
+        osvc_cluster_vip_cidr_subnet: '24'
+        osvc_node_prd_nic: 'enp1s0'
+        osvc_vip_external_fqdn: 'vip-example.com'
+        osvc_webapp_user: 'webadmin'
+        osvc_webapp_password: 'changeme123'
+        osvc_ca_cert_name: 'EXAMPLE CLUSTER'
+        osvc_ca_cert_country: 'FR'
+        osvc_ca_cert_org: 'Example Cluster Company'
+
+    - name: Install cni
+      import_role:
+        name: cni
+
+    - name: Configure backend network
+      import_role:
+        name: backend
+      vars:
+        osvc_backend_subnet_name: backendipv4
+        osvc_backend_subnet_range: 198.51.100.0/24
+        osvc_backend_subnet_ips_per_node: 128
+
+    - name: Configure dns
+      import_role:
+        name: dns
+      vars:
+        osvc_dns_cfg_recursor_allowed_subnets: '192.0.2.0/24,198.51.100.0/24,'
+
+    - name: Configure haproxy
+      import_role:
+        name: haproxy
+      vars:
+        osvc_haproxy_service_namespace: 'system'
+        osvc_haproxy_short_service_name: 'haproxy'
+        osvc_haproxy_vip: '192.0.2.20'
+        osvc_haproxy_netmask: '24'
+        osvc_haproxy_interface: 'br-prd'
+        osvc_haproxy_gateway: '192.0.2.254'
+        osvc_haproxy_nsdev: 'eth7'
+
+    - name: Configure zpools
+      import_role:
+        name: zfs
+      vars:
+        zfs_pool_name: data
+        zfs_disks:
+          - nvme0n1
+          - nvme3n1
+          - nvme1n1 
+          - nvme2n1
+
+    - name: Configure drbd
+      import_role:
+        name: drbd
+      vars:
+        disable_drbd_unit: false
+
+    - name: Configure pool#dirpool
+      import_role:
+        name: pool
+      vars:
+        osvc_pool_name: dirpool
+        osvc_pool_type: directory
+
+    - name: Configure pool#drbdpool
+      import_role: 
+        name: pool
+      vars:
+        osvc_pool_name: drbdpool
+        osvc_pool_type: drbd
+        osvc_pool_zpool: data
+        osvc_pool_status_schedule: "'@2'"
+
+    - name: Configure pool#dbssd
+      import_role:
+        name: pool
+      vars:
+        osvc_pool_name: dbssd
+        osvc_pool_type: virtual
+        osvc_pool_template: templates/vol/dbssd
+
+    - name: Configure pool#tank
+      import_role:
+        name: pool
+      vars:
+        osvc_pool_name: tank
+        osvc_pool_zpool_name: data
+        osvc_pool_type: zpool
+        osvc_pool_mkfs_opt: "'-o mountpoint=legacy -o dedup=on -o compression=on'"
+    - name: Configure pool#drbd4k
+      import_role: 
+        name: pool
+      vars:
+        osvc_pool_name: drbd4k
+        osvc_pool_type: drbd
+        osvc_pool_zpool: data
+        osvc_pool_status_schedule: "'@2'"
+        osvc_pool_max_peers: "8"
+        osvc_pool_mkblk_opt: "'-o volblocksize=4096'"

@@ -1,0 +1,148 @@
+---
+
+- name: Set fact on haproxy cfgmap creation
+  ansible.builtin.set_fact:
+    haproxy_cfg_created: 'true'
+  run_once: true
+
+- name: Check for haproxy cfgmap existence
+  ansible.builtin.command: om system/cfg/haproxy ls
+  changed_when: false
+  register: osvc_haproxy_cfgmap_query
+  run_once: true
+
+- name: Set fact according to actual haproxy cfgmap existence
+  ansible.builtin.set_fact:
+    haproxy_cfg_created: 'false'
+  run_once: true
+  when:
+    - osvc_haproxy_cfgmap_name not in osvc_haproxy_cfgmap_query.stdout
+
+- name: Set fact on haproxy secret creation                                                   
+  ansible.builtin.set_fact:                                                                   
+    haproxy_secret_created: 'true'                                                               
+  run_once: true
+
+- name: Check for haproxy secret existence                                                    
+  ansible.builtin.command: om system/sec/haproxy ls                                           
+  changed_when: false
+  register: osvc_haproxy_secret_query                                                         
+  run_once: true
+
+- name: Set fact according to actual haproxy secret existence                                 
+  ansible.builtin.set_fact:
+    haproxy_secret_created: 'false'
+  run_once: true
+  when: 
+    - osvc_haproxy_sec_name not in osvc_haproxy_secret_query.stdout
+
+- name: Create haproxy secret
+  ansible.builtin.command: om {{ osvc_haproxy_sec_name }} create
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - not haproxy_secret_created
+
+- name: Generate TLS certificate for haproxy secret
+  ansible.builtin.command: om {{ osvc_haproxy_sec_name }} gen cert
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - not haproxy_secret_created
+
+- name: Create haproxy cfgmap
+  ansible.builtin.command: om {{ osvc_haproxy_cfgmap_name }} create
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - not haproxy_cfg_created
+
+- name: Set fact on haproxy volume creation                                                  
+  ansible.builtin.set_fact:                                                                   
+    haproxy_vol_created: 'true'                                                               
+  run_once: true
+
+- name: Check for haproxy volume existence                                                   
+  ansible.builtin.command: om system/vol/haproxy-cfg ls                              
+  changed_when: false                                                                         
+  register: osvc_haproxy_vol_query                                                            
+  run_once: true
+
+- name: Set fact according to actual haproxy volume existence                                
+  ansible.builtin.set_fact:                                                                   
+    haproxy_vol_created: 'false'                                                              
+  run_once: true                                                                              
+  when:                                                                                       
+    - "'system/vol/haproxy-cfg' not in osvc_haproxy_vol_query.stdout"
+
+- name: Set haproxy.cfg content
+  ansible.builtin.command: om {{ osvc_haproxy_cfgmap_name }} add --key haproxy.cfg --from {{ osvc_haproxy_cfg_template }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - not haproxy_vol_created
+
+- name: Add the LUA ACME challenge responder script to the cfg
+  ansible.builtin.command: sudo om {{ osvc-haproxy_cfgmap_name }} add --key acme-http01-webroot.lua --from {{ acme_challenge_responder_script }}
+  run_once: true
+  changed_when: false
+
+- name: Set fact on haproxy service creation
+  ansible.builtin.set_fact:
+    haproxy_svc_created: 'true'
+  run_once: true
+
+- name: Check for haproxy service existence
+  ansible.builtin.command: om {{ osvc_haproxy_service_name }} ls
+  changed_when: false
+  register: osvc_haproxy_svc_query
+  run_once: true
+
+- name: Set fact according to actual haproxy service existence
+  ansible.builtin.set_fact:
+    haproxy_svc_created: 'false'
+  run_once: true
+  when:
+    - osvc_haproxy_service_name not in osvc_haproxy_svc_query.stdout
+
+- name: Deploy haproxy service
+  ansible.builtin.command: om {{ osvc_haproxy_service_name }} deploy --config {{ osvc_haproxy_svc_template }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - not haproxy_svc_created
+
+- name: Set IP configuration for haproxy service
+  ansible.builtin.command: >
+    om {{ osvc_haproxy_service_name }} set
+    --kw ip#2.type=netns
+    --kw ip#2.ipname={{ osvc_haproxy_vip }}
+    --kw ip#2.netmask={{ osvc_haproxy_netmask }}
+    --kw ip#2.ipdev={{ osvc_haproxy_interface }}
+    --kw ip#2.gateway={{ osvc_haproxy_gateway }}
+    --kw ip#2.nsdev={{ osvc_haproxy_nsdev }}
+    --kw ip#2.netns=container#0
+    --kw ip#2.shared=true
+    --kw ip#2.alias=false
+  run_once: true
+  changed_when: false
+
+- name: Disable sync#i0 resource
+  ansible.builtin.command: >
+    om {{ osvc_haproxy_service_name }} set
+    --kw sync#i0.disable=true
+  run_once: true
+  changed_when: false
+
+- name: Wait for haproxy service
+  ansible.builtin.script:
+    cmd: ../files/monitor.overall.sh {{ osvc_haproxy_service_name }} up 300s
+  run_once: true
+  changed_when: false
+  when:
+    - not haproxy_svc_created

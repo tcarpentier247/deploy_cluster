@@ -1,0 +1,32 @@
+---
+
+- name: Configure zpool
+  ansible.builtin.command:
+    cmd: >
+      om cluster set
+      --kw pool#{{ osvc_pool_name }}.type={{ osvc_pool_type }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+
+- name: Configure mkfs opt
+  ansible.builtin.command:
+    cmd: >
+      om cluster set
+      --kw pool#{{ osvc_pool_name }}.mkfs_opt={{ osvc_pool_mkfs_opt }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - (osvc_pool_mkfs_opt is defined) and (osvc_pool_mkfs_opt|length > 0)
+
+- name: Configure name
+  ansible.builtin.command:
+    cmd: >
+      om cluster set
+      --kw pool#{{ osvc_pool_name }}.name={{ osvc_pool_zpool_name }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - (osvc_pool_zpool_name is defined) and (osvc_pool_zpool_name|length > 0)

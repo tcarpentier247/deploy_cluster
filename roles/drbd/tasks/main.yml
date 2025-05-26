@@ -1,0 +1,46 @@
+---
+# tasks file for install_drbd
+- name: Install DRBD software requirements
+  ansible.builtin.include_tasks: "{{ ansible_os_family }}-requirements.yml"
+
+# need to be done before kernel module installation, to benefit from initramfs update involved by kms installation
+- name: Set LVM filter to avoid drbd devices to be scanned
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    regexp: '.*filter.*/dev/drbd.*" ].*'
+    insertbefore: '# Configuration option devices/global_filter'
+    line: '        filter = [ "r|/dev/drbd.*|" ]'
+
+- name: Install DRBD software
+  ansible.builtin.include_tasks: "{{ ansible_os_family }}.yml"
+
+- name: Load drbd kernel module
+  ansible.builtin.command: modprobe drbd
+  changed_when: false
+  notify:
+    - Restart opensvc daemon
+    - Wait for restart to be terminated
+
+- name: Check for drbd module to be loaded
+  ansible.builtin.shell:
+    cmd: set -o pipefail && modinfo drbd | grep -w "^version:" | awk '{print $2}'
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: _osvc_drbd_version
+
+- name: Test drbd version
+  ansible.builtin.assert:
+    that:
+      - "_osvc_drbd_version.stdout is version('9.0.0', '>=')"
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Disable drbd systemd unit
+  ansible.builtin.service:
+    name: drbd.service
+    enabled: false
+    state: stopped
+  when:
+    - disable_drbd_unit == true

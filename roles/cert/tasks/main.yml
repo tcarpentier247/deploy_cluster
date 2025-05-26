@@ -1,0 +1,9 @@
+---
+
+- name: Issue a certificate with ACME
+  ansible.builtin.command: >
+    docker exec {{ haproxy_container }} sh -c "acme.sh --issue --domain {{ cert_domain_name }} --email {{ cert_mail }} --webroot /acme-challenges"
+
+- name: Deploy the certificate with ACME
+  ansible.builtin.command: >
+    docker exec {{ haproxy_container }} sh -c "acme.sh --deploy --domain {{ cert_domain_name }} --deploy-hook haproxy"

@@ -1,0 +1,4 @@
+[clusternodes]
+host1 ansible_host=192.0.2.21 ansible_user=root ansible_become=yes ansible_ssh_private_key_file="ssh.private.key"
+host2 ansible_host=192.0.2.22 ansible_user=root ansible_become=yes ansible_ssh_private_key_file="ssh.private.key"
+host3 ansible_host=192.0.2.23 ansible_user=root ansible_become=yes ansible_ssh_private_key_file="ssh.private.key"

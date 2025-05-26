@@ -1,0 +1,6 @@
+---
+# zpool name
+zfs_pool_name: ""
+
+# disks to use in the zpool
+zfs_disks: ""

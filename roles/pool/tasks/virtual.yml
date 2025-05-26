@@ -1,0 +1,21 @@
+---
+
+- name: Configure virtual pool
+  ansible.builtin.command:
+    cmd: >
+      om cluster set
+      --kw pool#{{ osvc_pool_name }}.type={{ osvc_pool_type }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+
+- name: Configure template
+  ansible.builtin.command:
+    cmd: >
+      om cluster set
+      --kw pool#{{ osvc_pool_name }}.template={{ osvc_pool_template }}
+  run_once: true
+  register: output
+  changed_when: output.rc == 0
+  when:
+    - (osvc_pool_template is defined) and (osvc_pool_template|length > 0)

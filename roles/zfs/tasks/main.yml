@@ -1,0 +1,43 @@
+- name: Install ZFS packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - zfsutils-linux
+    - sudo
+  become: true
+  tags: zfs
+
+- name: Check if zpool exists
+  ansible.builtin.command: "zpool list -H -o name {{ zfs_pool_name }}"
+  register: zfs_pool_check
+  ignore_errors: true
+  changed_when: false
+  become: true
+  tags: zfs
+
+- name: Create zpool mirror
+  ansible.builtin.command: >
+    zpool create {{ zfs_pool_name }}
+    mirror {{ zfs_disks[0] }} {{ zfs_disks[1] }}
+    mirror {{ zfs_disks[2] }} {{ zfs_disks[3] }}
+  become: true
+  when:
+    - zfs_pool_name is defined
+    - zfs_disks is defined
+    - zfs_pool_check.rc != 0
+  tags: zfs
+
+- name: Check zpool status
+  ansible.builtin.command: "zpool status {{ zfs_pool_name }}"
+  become: true
+  register: zpool_status
+  changed_when: false
+  when: zfs_pool_check.rc == 0
+  tags: zfs
+
+- name: Print zpool status
+  ansible.builtin.debug:
+    var: zpool_status.stdout
+  when: zfs_pool_check.rc == 0
+  tags: zfs

@@ -1,0 +1,19 @@
+---
+# defaults file for install_haproxy
+osvc_haproxy_service_namespace: system
+osvc_haproxy_short_service_name: dns
+osvc_haproxy_cfgmap_name: "{{ osvc_haproxy_service_namespace }}/cfg/{{ osvc_haproxy_short_service_name }}"
+osvc_haproxy_service_name: "{{ osvc_haproxy_service_namespace }}/svc/{{ osvc_haproxy_short_service_name }}"
+osvc_haproxy_sec_name: "{{ osvc_haproxy_service_namespace }}/sec/{{ osvc_haproxy_short_service_name }}" 
+
+# haproxy configuration templates
+osvc_haproxy_cfg_template: "https://raw.githubusercontent.com/opensvc/opensvc_templates/main/igw_haproxy/acme-cfg-haproxy.cfg"
+osvc_haproxy_svc_template: "https://raw.githubusercontent.com/opensvc/opensvc_templates/main/igw_haproxy/acme-svc.conf"
+acme_challenge_responder_script: "https://raw.githubusercontent.com/opensvc/opensvc_templates/main/igw_haproxy/acme-http01-webroot.lua"
+
+# haproxy ip#2 configuration
+osvc_haproxy_vip: ""
+osvc_haproxy_netmask: ""
+osvc_haproxy_interface: ""
+osvc_haproxy_gateway: ""
+osvc_haproxy_nsdev: ""

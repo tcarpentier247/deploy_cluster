@@ -1,0 +1,14 @@
+---
+# defaults file for install_pool
+osvc_pool_type: ""
+osvc_pool_name: ""
+osvc_pool_status_schedule: ""
+osvc_pool_network: ""
+osvc_pool_path: ""
+osvc_pool_vg: ""
+osvc_pool_zpool: ""
+osvc_pool_mkblk_opt: ""
+osvc_pool_mkfs_opt: ""
+osvc_pool_max_peers: ""
+osvc_pool_zpool_name: ""
+osvc_pool_template: ""
